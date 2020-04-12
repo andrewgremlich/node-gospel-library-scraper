@@ -1,0 +1,19 @@
+{
+  "name": "node-gospel-library-scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node --max-old-space-size=4096 --experimental-modules index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.3",
+    "mkdirp": "^1.0.4",
+    "node-fetch": "^2.6.0",
+    "prettier": "^2.0.4"
+  }
+}
