@@ -11,6 +11,7 @@ const GOSPEL_LIBRARY_URL = `/study/scriptures?lang=eng`;
 
 const writeFile = promisify(fs.writeFile);
 
+// Load the section or HTML of the requested page.
 const loadSection = (url) =>
   new Promise((resolve, reject) => {
     fetch(`${CHURCH_URL}${url}`)
@@ -21,12 +22,17 @@ const loadSection = (url) =>
       .catch((err) => reject(err));
   });
 
+// parse the content of the chapter page and then add it to
+// a markdown file.
 const getPage = (url, { title, href, orderNumber }) => () =>
-  new Promise((resolve, reject) => {
+  new Promise((resolve, reject) =>
     loadSection(url).then((section) => {
       const $ = cheerio.load(section);
+
       $(".marker").remove();
       $(".mediaPointer-Jmh4d").remove();
+
+      const text = $(".renderFrame-1yHgQ .body-block").text();
 
       const chapterSummary = $("#study_summary1").text();
       const frontMatter = `---
@@ -40,31 +46,28 @@ order: ${orderNumber}
     
 `;
 
-      if ($(".renderFrame-1yHgQ .body-block").text()) {
-        const text = $(".renderFrame-1yHgQ .body-block").text();
+      if (text) {
         const prettyMD = prettier.format(text, { parser: "markdown" });
+        const file = frontMatter + prettyMD.replace(/[:\.;!?\),](?=\d)/g, ".\n\n");
 
-        const splitNumbers = prettyMD.replace(/[:\.;!?\),](?=\d)/g, ".\n\n");
+        const splitFilePath = ("." + href).split("/");
 
-        const dir = "." + href;
-
-        const splitFilePath = dir.split("/");
         const chapterName = splitFilePath.pop();
         const joinedFilePath = splitFilePath.join("/");
 
-        const file = frontMatter + splitNumbers;
+        // for debugging purposes.
+        // console.log("Writing page", title);
 
-        console.log("Writing page", title);
-
-        mkdirp(joinedFilePath).then(() => {
-          writeFile(`${joinedFilePath}/${chapterName}.md`, file).then(() => {
-            resolve();
-          });
-        });
+        mkdirp(joinedFilePath).then(() =>
+          writeFile(`${joinedFilePath}/${chapterName}.md`, file).then(() =>
+            resolve()
+          )
+        );
       }
-    });
-  });
+    })
+  );
 
+// Go through the list of chapters with the list that is open.
 const parseThroughList = ($, listWithBook, PromiseChain) => {
   listWithBook.each((index, element) => {
     const pageTitle = $(element).text();
@@ -82,6 +85,7 @@ const parseThroughList = ($, listWithBook, PromiseChain) => {
   });
 };
 
+// Go to the chapter URL
 const navigateToPage = (url, PromiseChain) =>
   loadSection(url)
     .then((section) => {
@@ -90,9 +94,10 @@ const navigateToPage = (url, PromiseChain) =>
       const listWithBook = $("ul.active-mDRbE a.item-3cCP7");
 
       activeLink.each((index, element) => {
-        if ($(element).attr("href")) {
-          const pageTitle = $(element).text();
-          const hrefForPage = $(element).attr("href");
+        const hrefForPage = $(element).attr("href");
+        const pageTitle = $(element).text();
+
+        if (hrefForPage) {
           const [noQueryParams] = hrefForPage.split("?");
           const orderNumber = index + 1;
 
@@ -112,18 +117,20 @@ const navigateToPage = (url, PromiseChain) =>
     })
     .catch((err) => console.error(err));
 
+// Navigate the book of scripture manifest for all the books.
 const navigateManifest = (url) =>
   loadSection(url)
     .then((section) => {
       const $ = cheerio.load(section);
 
-      let PromiseChain = Promise.resolve(3);
+      // Start the promise chain to attach promises to.
+      let PromiseChain = Promise.resolve();
 
       $(".manifest a").each((index, element) => {
-        if ($(element).attr("href")) {
-          const hrefForPage = $(element).attr("href");
+        const hrefValue = $(element).attr("href");
 
-          navigateToPage(hrefForPage, PromiseChain);
+        if (hrefValue) {
+          navigateToPage(hrefValue, PromiseChain);
         }
       });
     })
@@ -135,8 +142,12 @@ const navigateThroughTiles = (url) =>
       const $ = cheerio.load(section);
 
       $(".tile-3KqhL").each((index, element) => {
-        if (index === 0 && $(element).attr("href")) {
-          navigateManifest($(element).attr("href"));
+        const hrefValue = $(element).attr("href");
+
+        // This index number pertains to whatever book of scripture found
+        // in GOSPEL_LIBRARY_URL
+        if (index === 1 && hrefValue) {
+          navigateManifest(hrefValue);
         }
       });
     })
