@@ -31,6 +31,46 @@ ${toBeStringFrontMatter}
 `;
 };
 
+const writeIndedMDFile = async (
+  dominant,
+  isRightFolder,
+  sectionOrderNumber
+) => {
+  if (sectionOrderNumber && isRightFolder.length === 6 && dominant) {
+    const indexOfBookFrontMatter = makeFrontMatter`title: ${dominant}date: ${new Date()}order: ${sectionOrderNumber}`;
+    const indexFile = `${indexOfBookFrontMatter}## ${dominant}`;
+
+    const dirToWrite = [...isRightFolder];
+    dirToWrite.splice(5, 1, "");
+    const joinToHref = "." + dirToWrite.join("/");
+
+    await mkdirp(joinToHref);
+    await writeFile(joinToHref + "_index.md", indexFile);
+  }
+
+  return;
+};
+
+const writeSectionOfBook = async (text, chapterSummary, title, href, orderNumber, sectionOrderNumber) => {
+  if (text) {
+    const frontMatter = makeFrontMatter`title: ${title}date: ${new Date()}description: ${chapterSummary}order: ${
+      sectionOrderNumber || orderNumber
+    }`;
+    const prettyMD = prettier.format(text, { parser: "markdown" });
+    const file = frontMatter + prettyMD.replace(/[:\.;!?\),](?=\d)/g, ".\n\n");
+
+    const splitFilePath = ("." + href).split("/");
+
+    const chapterName = splitFilePath.pop();
+    const joinedFilePath = splitFilePath.join("/");
+
+    await mkdirp(joinedFilePath);
+    await writeFile(`${joinedFilePath}/${chapterName}.md`, file);
+  }
+
+  return;
+};
+
 // parse the content of the chapter page and then add it to
 // a markdown file.
 const getPage = (
@@ -48,37 +88,10 @@ const getPage = (
   const dominant = $(".dominant").text();
   const isRightFolder = href.split(/\//g);
 
-  if (sectionOrderNumber && isRightFolder.length === 6 && dominant) {
-    const indexOfBookFrontMatter = makeFrontMatter`title: ${dominant}date: ${new Date()}order: ${sectionOrderNumber}`;
-    const indexFile = `${indexOfBookFrontMatter}## ${dominant}`;
+  const chapterSummary = $("#study_summary1").text();
 
-    const dirToWrite = [...isRightFolder];
-    dirToWrite.splice(5, 1, "");
-    const joinToHref = "." + dirToWrite.join("/");
-
-    await mkdirp(joinToHref);
-    await writeFile(joinToHref + "_index.md", indexFile);
-  }
-
-  if (text) {
-    const chapterSummary = $("#study_summary1").text();
-    const frontMatter = makeFrontMatter`title: ${title}date: ${new Date()}description: ${chapterSummary}order: ${
-      sectionOrderNumber || orderNumber
-    }`;
-    const prettyMD = prettier.format(text, { parser: "markdown" });
-    const file = frontMatter + prettyMD.replace(/[:\.;!?\),](?=\d)/g, ".\n\n");
-
-    const splitFilePath = ("." + href).split("/");
-
-    const chapterName = splitFilePath.pop();
-    const joinedFilePath = splitFilePath.join("/");
-
-    // for debugging purposes.
-    // console.log("Writing page", title);
-
-    await mkdirp(joinedFilePath);
-    await writeFile(`${joinedFilePath}/${chapterName}.md`, file);
-  }
+  await writeIndedMDFile(dominant, isRightFolder, sectionOrderNumber);
+  await writeSectionOfBook(text, chapterSummary, title, href, orderNumber, sectionOrderNumber);
 
   //NEEDED for promise chain to work.
   return;
@@ -169,7 +182,7 @@ const navigateThroughTiles = async (url) => {
      * 3 = D&C
      * 4 = PGP
      */
-    if (index === 0 && hrefValue) {
+    if (index === 4 && hrefValue) {
       navigateManifest(hrefValue);
     }
   });
