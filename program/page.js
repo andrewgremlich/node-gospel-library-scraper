@@ -1,35 +1,13 @@
-import fs from "fs";
-import { promisify } from "util";
-
-import fetch from "node-fetch";
-import cheerio from "cheerio";
 import prettier from "prettier";
+import cheerio from "cheerio";
 import mkdirp from "mkdirp";
 
-const CHURCH_URL = "https://www.churchofjesuschrist.org";
-const GOSPEL_LIBRARY_URL = `/study/scriptures?lang=eng`;
-
-const writeFile = promisify(fs.writeFile);
-
-// Load the section or HTML of the requested page.
-const loadSection = async (url) => {
-  const sectionData = await fetch(`${CHURCH_URL}${url}`);
-  const parsedTextData = sectionData.text();
-  return parsedTextData;
-};
-
-const makeFrontMatter = (names, ...params) => {
-  const toBeStringFrontMatter = names
-    .filter((name) => name)
-    .map((name, index) => `${name}${params[index]}`)
-    .join("\n");
-
-  return `---
-${toBeStringFrontMatter}
----
-
-`;
-};
+import {
+  loadSection,
+  makeFrontMatter,
+  writeFile,
+  noQueryParams
+} from "./utils.js";
 
 const writeIndedMDFile = async (
   dominant,
@@ -51,13 +29,20 @@ const writeIndedMDFile = async (
   return;
 };
 
-const writeSectionOfBook = async (text, chapterSummary, title, href, orderNumber, sectionOrderNumber) => {
+const writeSectionOfBook = async (
+  text,
+  chapterSummary,
+  title,
+  href,
+  orderNumber,
+  sectionOrderNumber
+) => {
   if (text) {
     const frontMatter = makeFrontMatter`title: ${title}date: ${new Date()}description: ${chapterSummary}order: ${
       sectionOrderNumber || orderNumber
     }`;
-    const prettyMD = prettier.format(text, { parser: "markdown" });
-    const file = frontMatter + prettyMD.replace(/[:\.;!?\),](?=\d)/g, ".\n\n");
+    const prettyHTML = prettier.format(text, { parser: "html" });
+    const file = frontMatter + prettyHTML;
 
     const splitFilePath = ("." + href).split("/");
 
@@ -82,8 +67,15 @@ const getPage = (
 
   $(".marker").remove();
   $(".mediaPointer-Jmh4d").remove();
+  $("a").removeAttr("href").removeAttr("class");
+  $("p").removeAttr("data-aid").removeAttr("id").removeAttr("class");
+  $("span").removeAttr("class").removeAttr("data-page");
 
-  const text = $(".renderFrame-1yHgQ .body-block").text();
+  $("p").each(function (index, paragraph) {
+    $(this).html($(this).text());
+  })
+
+  const text = $(".renderFrame-1yHgQ .body-block").html();
 
   const dominant = $(".dominant").text();
   const isRightFolder = href.split(/\//g);
@@ -91,7 +83,14 @@ const getPage = (
   const chapterSummary = $("#study_summary1").text();
 
   await writeIndedMDFile(dominant, isRightFolder, sectionOrderNumber);
-  await writeSectionOfBook(text, chapterSummary, title, href, orderNumber, sectionOrderNumber);
+  await writeSectionOfBook(
+    text,
+    chapterSummary,
+    title,
+    href,
+    orderNumber,
+    sectionOrderNumber
+  );
 
   //NEEDED for promise chain to work.
   return;
@@ -102,14 +101,15 @@ const parseThroughList = ($, listWithBook, PromiseChain) => {
   listWithBook.each((index, element) => {
     const pageTitle = $(element).text();
     const hrefForPage = $(element).attr("href");
-    const [noQueryParams] = hrefForPage.split("?");
+
+    const straightURL = noQueryParams(hrefForPage);
     const orderNumber = index + 1;
 
     PromiseChain = PromiseChain.then(
       getPage(hrefForPage, {
         title: pageTitle,
-        href: noQueryParams,
-        orderNumber,
+        href: straightURL,
+        orderNumber
       })
     );
   });
@@ -128,15 +128,15 @@ const navigateToPage = async (url, PromiseChain, sectionOrderNumber) => {
     const pageTitle = $(element).text();
 
     if (hrefForPage) {
-      const [noQueryParams] = hrefForPage.split("?");
+      const straightURL = noQueryParams(hrefForPage);
       const orderNumber = index + 1;
 
       PromiseChain = PromiseChain.then(
         getPage(hrefForPage, {
           title: pageTitle,
-          href: noQueryParams,
+          href: straightURL,
           orderNumber,
-          sectionOrderNumber,
+          sectionOrderNumber
         })
       );
 
@@ -148,44 +148,4 @@ const navigateToPage = async (url, PromiseChain, sectionOrderNumber) => {
   });
 };
 
-// Navigate the book of scripture manifest for all the books.
-const navigateManifest = async (url) => {
-  const section = await loadSection(url);
-  const $ = cheerio.load(section);
-
-  // Start the promise chain to attach promises to.
-  let PromiseChain = Promise.resolve();
-
-  $(".manifest a").each((index, element) => {
-    const hrefValue = $(element).attr("href");
-    const sectionOrderNumber = index + 1;
-
-    if (hrefValue) {
-      navigateToPage(hrefValue, PromiseChain, sectionOrderNumber);
-    }
-  });
-};
-
-const navigateThroughTiles = async (url) => {
-  const section = await loadSection(url);
-  const $ = cheerio.load(section);
-
-  $(".tile-3KqhL").each((index, element) => {
-    const hrefValue = $(element).attr("href");
-
-    // This index number pertains to whatever book of scripture found
-    // in GOSPEL_LIBRARY_URL
-    /**
-     * 0 = OT
-     * 1 = NT
-     * 2 = BOM
-     * 3 = D&C
-     * 4 = PGP
-     */
-    if (index === 4 && hrefValue) {
-      navigateManifest(hrefValue);
-    }
-  });
-};
-
-navigateThroughTiles(GOSPEL_LIBRARY_URL);
+export { navigateToPage };

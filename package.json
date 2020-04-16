@@ -1,15 +1,16 @@
 {
   "name": "node-gospel-library-scraper",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A web scraper to get gospel library content from The Church of Jesus Christ of Latter-day Saints.",
+  "main": "./program/index.js",
   "type": "module",
   "scripts": {
-    "start": "node --max-old-space-size=4096 --experimental-modules index.js"
+    "start": "node --max-old-space-size=4096 --experimental-modules ./program/index.js",
+    "format": "prettier --write ./program/**/*.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Andrew Gremlich",
+  "license": "MIT",
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
     "mkdirp": "^1.0.4",
