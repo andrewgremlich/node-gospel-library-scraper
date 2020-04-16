@@ -41,7 +41,7 @@ const navigateThroughTiles = (async (url) => {
      * 3 = D&C
      * 4 = PGP
      */
-    if (index === 0 && hrefValue) {
+    if (index === 3 && hrefValue) {
       navigateManifest(hrefValue);
     }
   });

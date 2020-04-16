@@ -65,6 +65,8 @@ const getPage = (
   const section = await loadSection(url);
   const $ = cheerio.load(section);
 
+  const dominant = $(".dominant").text();
+
   $(".marker").remove();
   $(".mediaPointer-Jmh4d").remove();
   $("a").removeAttr("href").removeAttr("class");
@@ -76,8 +78,6 @@ const getPage = (
   })
 
   const text = $(".renderFrame-1yHgQ .body-block").html();
-
-  const dominant = $(".dominant").text();
   const isRightFolder = href.split(/\//g);
 
   const chapterSummary = $("#study_summary1").text();
