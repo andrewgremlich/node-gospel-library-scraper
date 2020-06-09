@@ -8,10 +8,12 @@ const CHURCH_URL = "https://www.churchofjesuschrist.org";
 
 export const writeFile = promisify(fs.writeFile);
 
-export const noQueryParams = (url) => url.split("?")[0];
+export const statFile = promisify(fs.stat);
+
+export const noQueryParams = url => url.split("?")[0];
 
 // Load the section or HTML of the requested page.
-export const loadSection = async (url) => {
+export const loadSection = async url => {
   const sectionData = await fetch(`${CHURCH_URL}${url}`);
   const parsedTextData = sectionData.text();
   return parsedTextData;
@@ -19,7 +21,7 @@ export const loadSection = async (url) => {
 
 export const makeFrontMatter = (names, ...params) => {
   const toBeStringFrontMatter = names
-    .filter((name) => name)
+    .filter(name => name)
     .map((name, index) => `${name}${params[index]}`)
     .join("\n");
 
@@ -30,7 +32,7 @@ ${toBeStringFrontMatter}
 `;
 };
 
-export const beginIndexFileStructure = async (url) => {
+export const beginIndexFileStructure = async url => {
   const noQuery = noQueryParams(url);
   const urlPath = noQuery.split("/");
 

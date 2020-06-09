@@ -1,11 +1,13 @@
 {
   "name": "node-gospel-library-scraper",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "A web scraper to get gospel library content from The Church of Jesus Christ of Latter-day Saints.",
   "main": "./program/index.js",
   "type": "module",
   "scripts": {
-    "start": "node --max-old-space-size=4096 --experimental-modules ./program/index.js",
+    "get:BOM": "node --experimental-modules ./program/index.js --library-url /study/scriptures --book BOM",
+    "start": "npm run get:BOM",
+    "debug": "node --experimental-modules ./program/index.js --debug",
     "format": "prettier --write ./program/**/*.js"
   },
   "keywords": [],
@@ -13,6 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
+    "commander": "^5.1.0",
     "mkdirp": "^1.0.4",
     "node-fetch": "^2.6.0",
     "prettier": "^2.0.4"

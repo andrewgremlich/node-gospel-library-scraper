@@ -1,12 +1,27 @@
 import cheerio from "cheerio";
+import commander from "commander";
 
 import { navigateToPage } from "./page.js";
 import { loadSection, beginIndexFileStructure } from "./utils.js";
+import { parseBook, libraryUrl } from "./command-line-parsers.js";
 
-const GOSPEL_LIBRARY_URL = `/study/scriptures`;
+const { program } = commander;
+
+program.version("0.2.0");
+
+program
+  .option("-d, --debug", "Debug the web scraper application")
+  .option("-b, --book <acronym>", "Book of Scripture the parse.", parseBook)
+  .option("-l, --library-url <url>", "Library URL to parse from.", libraryUrl);
+
+program.parse(process.argv);
+
+if (program.debug) {
+  process.env.DEBUG = true;
+}
 
 // Navigate the book of scripture manifest for all the books.
-const navigateManifest = async (url) => {
+const navigateManifest = async url => {
   const section = await loadSection(url);
   const $ = cheerio.load(section);
 
@@ -25,24 +40,15 @@ const navigateManifest = async (url) => {
   });
 };
 
-const navigateThroughTiles = (async (url) => {
-  const section = await loadSection(url);
+(async () => {
+  const section = await loadSection(program.libraryUrl);
   const $ = cheerio.load(section);
 
   $(".tile-3KqhL").each((index, element) => {
     const hrefValue = $(element).attr("href");
 
-    // This index number pertains to whatever book of scripture found
-    // in GOSPEL_LIBRARY_URL
-    /**
-     * 0 = OT
-     * 1 = NT
-     * 2 = BOM
-     * 3 = D&C
-     * 4 = PGP
-     */
-    if (index === 3 && hrefValue) {
+    if (index === program.book && hrefValue) {
       navigateManifest(hrefValue);
     }
   });
-})(GOSPEL_LIBRARY_URL);
+})();
